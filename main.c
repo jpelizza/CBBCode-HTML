@@ -4,5 +4,7 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-    simple_regex_example();
+    char bbcode[1024] = "ASD[b]ASD[code]ASD[/b]asSDAAS[/code]";
+    char *buf;
+    bbcodetohtml(bbcode,*buf,-1);
 }
