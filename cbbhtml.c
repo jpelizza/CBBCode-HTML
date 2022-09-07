@@ -3,44 +3,36 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <regex.h>
+#include <assert.h>
 
-unsigned int NUM_TAGS = 7;
+return_buffer[4096];
 
-char *bb_to_html(char *html, struct bb_config *conf) {
+int simple_regex_example(){
+    regex_t regex;
+    regmatch_t m;
+    
+    const char *reg_str = "\\[b\\][^\\[]*?\\[\\/b\\]";//(?:(\[b\].*\[\/b\])+)+?
+    char *data = (char*)malloc(sizeof(char)*1024);
+    strcpy(data,"asd[b]this is bb code[/b]fghjkl[b]this is bb code[/b]bnm");
 
-    const char *bb_tokens_begin[10] = {"[b]", "[i]", "[u]", "[s]", "[code]"};
-    const char *bb_tokens_end[10] = {"[/b]", "[/i]", "[/u]", "[/s]", "[/code]"};
-    const char *html_tokens_begin[10] = {"<strong>", "<em>", "<ins>", "<del>", "<pre>"};
-    const char *html_tokens_end[10] = {"</strong>", "</em>", "</ins>", "</del>", "</pre>"};
-
-    printf("%s\n", html);
-    char *token_begin = (char *)malloc(sizeof(char) * 1028);
-    char *token_end = (char *)malloc(sizeof(char) * 1028);
-    char *delim_begin = (char *)malloc(sizeof(char) * 32);
-    char *delim_end = (char *)malloc(sizeof(char) * 32);
-
-    // first parse
-    for (unsigned int tag = 0; tag < NUM_TAGS; tag++) {
-        // setup delimitadores
-        strcpy(delim_begin, bb_tokens_begin[tag]);
-        strcpy(delim_end, bb_tokens_end[tag]);
-        // get first token location, resulting token is strin up until
-
-        token_begin = strstr(html, delim_begin);
-        token_end = strstr(html + (int)strcspn(html, delim_begin), delim_end);
-        while (token_begin != NULL && token_end != NULL) {
-            printf("i- %s\n", token_begin);
-            printf("e- %s\n", token_end);
-            strcpy(html, str_replace(html, token_begin, strlen(delim_begin), html_tokens_begin[tag]));
-            strcpy(html, str_replace(html, token_end, strlen(delim_end), html_tokens_end[tag]));
-            token_begin = strstr(html, delim_begin);
-            token_end = strstr(html + (int)strcspn(html, delim_begin), delim_end);
+    if (regcomp(&regex,reg_str,REG_EXTENDED) == 0){
+        printf("Regular expression compiled successfully.");
+    }
+    else{
+        printf("Compilation error.");
+    }
+    while(1){
+        int reg_result = regexec(&regex, data,1,&m,0);
+        if(reg_result==0){
+            strcpy(data,str_replace(data,data+m.rm_eo-4,4,"</strong>"));
+            strcpy(data,str_replace(data,data+m.rm_so,3,"<strong>"));
+        }else{
             break;
         }
     }
-    printf("%s\n", html);
-
-    return html;
+    printf("%s\n",data);
+    return 0;
 }
 
 /**
@@ -52,20 +44,24 @@ char *bb_to_html(char *html, struct bb_config *conf) {
  * @param substr substring to take prt1's place
  */
 char *str_replace(const char *str, const char *ptr, size_t ptr_len, const char *substr) {
-
     char *prestr = (char *)malloc(sizeof(char) * strlen(str));
     char *poststr = (char *)malloc(sizeof(char) * strlen(str));
+    memset(prestr,0,sizeof(strlen(str)));
+    memset(poststr,0,sizeof(strlen(str)));
+    memset(return_buffer,0,sizeof(return_buffer));
 
-    strncpy(prestr, str, (size_t)(ptr - str));
+    strncpy(prestr, str, (size_t)(ptr-str));
+    prestr[(size_t)(ptr-str)]='\0'; // stupid fix for strncpy
+    printf("%d - %d - %s\n", (size_t)(ptr-str),strlen(prestr),prestr);
+
     strcpy(poststr, str + (size_t)(ptr - str + ptr_len));
-
-    printf("- %s\n", prestr);
-    printf("- %s\n", substr);
-    printf("- %s\n", poststr);
 
     strcat(prestr, substr);
     strcat(prestr, poststr);
-    printf("+ %s\n", prestr);
 
-    return prestr;
+    strcpy(return_buffer,prestr);
+    free(prestr);
+    free(poststr);
+
+    return return_buffer;
 }
