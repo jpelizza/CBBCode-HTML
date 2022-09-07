@@ -7,5 +7,5 @@
 //     char *emoticons_url;
 // };
 
-int simple_regex_example();
-char *str_replace(const char *str, const char *ptr, size_t ptr_len, const char *substr);
+int bbcodetohtml(const char *bbcode,char *buffer, int buffer_size);
+char *str_replace(char *str, const char *ptr, size_t ptr_len, const char *substr);
