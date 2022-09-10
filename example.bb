@@ -11,10 +11,8 @@
 
 [quote="author"]quoted text[/quote]
 [url=https://en.wikipedia.org]English Wikipedia[/url]
-
 [style size="30px"]Large Text[/style]
 [style size="85"]Smaller Text[/style]
-
 [style color="fuchsia"]Text in fuchsia[/style] or
 [style color=#FF00FF]Text in fuchsia[/style] or
 [color=#FF00FF]Text in fuchsia[/color]

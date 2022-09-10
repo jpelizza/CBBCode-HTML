@@ -9,7 +9,6 @@ Running this regex on a loop should find every possible
 [u]underlined text[/u]
 [s]strikethrough text[/s]
 [url]https://en.wikipedia.org[/url]
-:) or [:-)]
 [quote]quoted text[/quote]
 [code]monospaced text[/code]	
 
@@ -46,3 +45,6 @@ complex lists:
 [/list]
 
 [list=circle][/list], [list=disc][/list], [list=square][/list].
+
+
+:) or [:-)]
