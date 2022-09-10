@@ -4,11 +4,8 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-    char *test;
-    test = (char *)malloc(sizeof(char) * 50);
-    strcpy(test, "asd[b]Text[/b]asd[i]Text[/i]\n");
-
-    struct bb_config conf;
-    bb_to_html(test, NULL);
-    return 0;
+	char bbcode[1024] = "ASD[b]ASD[code]ASD[/b]asSDAAS[/code]";
+	char *buf;
+	printf("%d\n", bbcodetohtml_simple(bbcode, &buf, -1));
+	printf("str:%s mem:%d\n\n", buf, (void *)&buf);
 }
