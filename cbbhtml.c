@@ -50,13 +50,12 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 		memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
 		strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
 
-		for (symbol = 0; symbol < 8; symbol++) {
+		for (symbol = 0; symbol < 7; symbol++) {
 			if (!strcmp(subgroup, bb_tokens[symbol]))
 				break;
 		}
 
 		int bbt_len = strlen(bb_tokens[symbol]);
-		printf("%s, %d, %d\n", *buffer, strlen(buffer), buffer_size);
 		str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, html_tokens_end[symbol]);
 		str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
 	}
@@ -74,25 +73,23 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
 	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr))));
 	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
-	memset(prestr, '\0', sizeof(strlen(*buf)));
+	memset(prestr, '\0', sizeof((strlen(*buf) + (strlen(substr)))));
 	memset(poststr, '\0', sizeof(strlen(*buf)));
 
 	strncpy(prestr, *buf, (size_t)(ptr - *buf));
+	memset(prestr + (size_t)(ptr - *buf), '\0', 1);
 	strcpy(poststr, *buf + (size_t)(ptr - *buf + ptr_len));
 
 	strcat(prestr, substr);
 	strcat(prestr, poststr);
-	printf("%s : %d size : Original size: %d : substr size:%d\n\n\n", prestr, strlen(prestr), strlen(*buf),
-		   strlen(substr));
 	if (*buf_size <= strlen(prestr)) {
 		/*
 			R: 75 -- Reallocs to 75 correctly
 			R: 80 -- Reallocs to 80 correctly
 			R: 112 -- DOES NOT Reallocs to 112 correctly :(
 		 */
-		printf("R: %d\n", strlen(prestr));
 		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1); // I'm not sure I'm doing this correctly
-		*buf_size = strlen(prestr) + 1;
+		*buf_size = strlen(prestr);
 		// ERROR: mremap_chunk(): invalid pointer
 	}
 
