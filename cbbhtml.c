@@ -20,10 +20,10 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 	regex_t regex;
 	regmatch_t m[2];
 
-	char bb_tokens[][24] = {"0", "b", "i", "u", "s", "url", "quote", "code"};
-	char html_tokens_begin[][24] = {"0",	 "<strong>",	  "<em>",		  "<ins>",
+	char bb_tokens[][16] = {"0", "b", "i", "u", "s", "url", "quote", "code"};
+	char html_tokens_begin[][16] = {"0",	 "<strong>",	  "<em>",		  "<ins>",
 									"<del>", "<a href\"#\">", "<blockquote>", "<pre>"};
-	char html_tokens_end[][24] = {"0", "</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
+	char html_tokens_end[][16] = {"0", "</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
 	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
 	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]";
 
@@ -43,23 +43,20 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 		return 2;
 	}
 
-	for (unsigned int symbol = 0; symbol < sizeof(bb_tokens) / sizeof(*bb_tokens); symbol++) {
-		// Search for all instances of regex from left to right
-		while (regexec(&regex, *buffer, 3, m, 0) != REG_NOMATCH) {
-			int symbol;
-			char *subgroup = (char *)malloc(sizeof(char) * (m[1].rm_eo - m[1].rm_so + 1));
-			memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
-			strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
+	// Search for all instances of regex from left to right
+	while (regexec(&regex, *buffer, 2, m, 0) != REG_NOMATCH) {
+		int symbol;
+		char *subgroup = (char *)malloc(sizeof(char) * (m[1].rm_eo - m[1].rm_so + 1));
+		memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
+		strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
 
-			for (symbol = 1; symbol < 8; symbol++) {
-				if (!strcmp(subgroup, bb_tokens[symbol]))
-					break;
-			}
-			int bbt_len = strlen(bb_tokens[symbol]);
-			str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3,
-						html_tokens_end[symbol]);
-			str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
+		for (symbol = 1; symbol < 8; symbol++) {
+			if (!strcmp(subgroup, bb_tokens[symbol]))
+				break;
 		}
+		int bbt_len = strlen(bb_tokens[symbol]);
+		str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, html_tokens_end[symbol]);
+		str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
 	}
 	return 0;
 }
