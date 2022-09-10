@@ -1,114 +1,97 @@
 #include "cbbhtml.h"
 
+#include <assert.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <regex.h>
-#include <assert.h>
 
 /**
  * @brief Writes translated bbcode into buffer;
- * 
+ *
  * @param bbcode bbcode string to translate
- * @param buffer buffer to write translated bbcodfe to html to
+ * @param buffer Address of an char array to write html
  * @param buffer_size send buffer size, -1 if not allocated memory
  * @return int return error code 0 if successeful
  * 1 if allocation error
  * 2 if regex compilation error
  */
-int bbcodetohtml(const char *bbcode,char *buffer, int buffer_size){
-    regex_t regex;
-    regmatch_t m;
+int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
+	regex_t regex;
+	regmatch_t m[2];
 
-    const char *simple_bb_tokens[] = {"b", "i", "u", "s","url","quote", "code"};
-    const char *simple_html_tokens_begin[] = {"<strong>", "<em>", "<ins>", "<del>","<a href\"#\">","<blockquote>", "<pre>"};
-    const char *simple_html_tokens_end[] = {"</strong>", "</em>", "</ins>", "</del>","</a>","</blockquote>", "</pre>"};
-    
-    // const char *reg_str = "\\[b\\][^\\[]*?\\[\\/b\\]";
-    char *reg_str = (char*)malloc(sizeof(char)*64); //arbitrary number as of now, make sure to write code that takes largest possible string and apply size;
-    printf("%d - passou\n",1);
-    memset(reg_str,'\0',64);
-    const char *simple_reg_str_first = "\\[";
-    const char *simple_reg_str_second = "\\].*?\\[\\/";
-    const char *simple_reg_str_third = "\\]";
-    printf("%d - passou\n",2);
+	char bb_tokens[][24] = {"0", "b", "i", "u", "s", "url", "quote", "code"};
+	char html_tokens_begin[][24] = {"0",	 "<strong>",	  "<em>",		  "<ins>",
+									"<del>", "<a href\"#\">", "<blockquote>", "<pre>"};
+	char html_tokens_end[][24] = {"0", "</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
+	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
+	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]";
 
-    if(buffer_size==-1){
-        buffer = (char*)malloc((sizeof(char)*strlen(bbcode))+1);
-    }else if(buffer_size<strlen(bbcode)){
-        buffer = (char*)realloc(buffer,(sizeof(char)*strlen(bbcode))+1);
-    }
-    if(buffer==NULL){
-        return 1;
-    }
-    strcpy(buffer,bbcode);
+	if (buffer_size == -1) {
+		*buffer = (char *)malloc((sizeof(char) * strlen(bbcode)) + 1);
+		buffer_size = strlen(bbcode) + 1;
+	} else if (buffer_size < strlen(bbcode)) { // broken
+		*buffer = (char *)realloc(*buffer, (sizeof(char) * strlen(bbcode)) + 1);
+		buffer_size = strlen(bbcode) + 1;
+	}
+	if (*buffer == NULL || reg_str == NULL)
+		return 1;
 
-    printf("%d - passou\n",3);
+	strcpy(*buffer, bbcode);
 
-    for (unsigned int symbol=0;symbol<sizeof(simple_bb_tokens)/sizeof(*simple_bb_tokens);symbol++){
-        strcat(reg_str,simple_reg_str_first);
-        strcat(reg_str,simple_bb_tokens[symbol]);
-        strcat(reg_str,simple_reg_str_second);
-        strcat(reg_str,simple_bb_tokens[symbol]);
-        strcat(reg_str,simple_reg_str_third);
-        printf("Regex: %s\n",reg_str);
-        //Regex compilation
-        if (regcomp(&regex,reg_str,REG_EXTENDED) != 0){
-            return 2;
-        }else{
-            printf("Compiled successefully\n");
-        }
+	if (regcomp(&regex, reg_str, REG_EXTENDED) != 0) {
+		return 2;
+	}
 
-        //Search for all instances of regex from left to right
-        //Therefore to avoid problems, search should start from the last position on the previous match
-        while(1){
-            int reg_result = regexec(&regex, buffer,1,&m,0);
-            if(reg_result!=REG_NOMATCH){
-                int bbt_len = strlen(simple_bb_tokens[symbol]);
-                printf("==============\n");
-                printf("%s",reg_str);
-                printf("%d %d :",m.rm_so,m.rm_eo);
-                printf("%d\n",bbt_len);
-                printf("%s\n",buffer);
-                //Copy to buffer, the result of replacing bb_code with html, lenght is [¹\²BBT_LEN]³, 3 characters for ending token, 2 for beg([¹]²).
-                str_replace(buffer,buffer+m.rm_eo-(bbt_len+3),bbt_len+3,simple_html_tokens_end[symbol]);
-                str_replace(buffer,buffer+m.rm_so,bbt_len+2,simple_html_tokens_begin[symbol]);
-                printf("=====RESULT ==\n");
-                printf("%s",reg_str);
-                printf("%d %d :",m.rm_so,m.rm_eo);
-                printf("%s\n",buffer);
-            }else{
-                break;
-            }
-            //ASD[b]ASD[b]ASD[/b]asSDAAS
-        }
-        memset(reg_str,'\0',64);
-        printf("loop_end");
-    }
-    return 0;    
+	for (unsigned int symbol = 0; symbol < sizeof(bb_tokens) / sizeof(*bb_tokens); symbol++) {
+		// Search for all instances of regex from left to right
+		while (regexec(&regex, *buffer, 3, m, 0) != REG_NOMATCH) {
+			int symbol;
+			char *subgroup = (char *)malloc(sizeof(char) * (m[1].rm_eo - m[1].rm_so + 1));
+			memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
+			strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
+
+			for (symbol = 1; symbol < 8; symbol++) {
+				if (!strcmp(subgroup, bb_tokens[symbol]))
+					break;
+			}
+			int bbt_len = strlen(bb_tokens[symbol]);
+			str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3,
+						html_tokens_end[symbol]);
+			str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
+		}
+	}
+	return 0;
 }
 
 /**
  * @brief Replaces on str, from ptr1 to ptr1+len with ptr2
  *
- * @param str String to have text replaced
+ * @param buf buffer string to have text replaced
  * @param ptr pointer to where replacing will take place
  * @param ptr_len lenght of word to be replaced
  * @param substr substring to take prt1's place
  */
-char *str_replace(char *str, const char *ptr, size_t ptr_len, const char *substr) {
-    char *prestr = (char *)malloc(sizeof(char) * (strlen(str)+ptr_len+strlen(substr)));
-    char *poststr = (char *)malloc(sizeof(char) * strlen(str));
-    memset(prestr,'\0',sizeof(strlen(str)));
-    memset(poststr,'\0',sizeof(strlen(str)));
-    strncpy(prestr, str, (size_t)(ptr-str));
-    strcpy(poststr, str + (size_t)(ptr - str + ptr_len));
+char *str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
+	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + ptr_len + strlen(substr)));
+	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
+	memset(prestr, '\0', sizeof(strlen(*buf)));
+	memset(poststr, '\0', sizeof(strlen(*buf)));
 
-    strcat(prestr, substr);
-    strcat(prestr, poststr);
+	strncpy(prestr, *buf, (size_t)(ptr - *buf));
+	strcpy(poststr, *buf + (size_t)(ptr - *buf + ptr_len));
 
-    strcpy(str,prestr);
-    free(prestr);
-    free(poststr);
-    return NULL;
+	strcat(prestr, substr);
+	strcat(prestr, poststr);
+
+	if (*buf_size < strlen(prestr)) {
+		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1);
+		*buf_size = strlen(prestr) + 1;
+	}
+
+	strcpy(*buf, prestr);
+	free(prestr);
+	free(poststr);
+
+	return *buf;
 }
