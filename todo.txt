@@ -3,7 +3,7 @@
 I'll divide bbcode into four categories.
 First one is simple bbcode, those can be fit into the following regex:
 Running this regex on a loop should find every possible 
-"\[X\].*?\[\/X\]"
+"\[(b|i|u|s|url|quote|code)\].*?\[\/\1\]"
 [b]bolded text[/b]
 [i]italicized text[/i]
 [u]underlined text[/u]
