@@ -46,4 +46,3 @@ complex lists:
 [/list]
 
 [list=circle][/list], [list=disc][/list], [list=square][/list].
-

@@ -2,16 +2,15 @@
 [i]italicized text[/i]	
 [u]underlined text[/u]	
 [s]strikethrough text[/s]	
-
+[code]monospaced text[/code]	
 [url]https://en.wikipedia.org[/url]
-[url=https://en.wikipedia.org]English Wikipedia[/url]
-
 [img]https://upload.wikimedia.org/wikipedia/commons/7/70/Example.png[/img]	
+[quote]quoted text[/quote]
+
 :) or [:-)]
 
-[quote]quoted text[/quote]
 [quote="author"]quoted text[/quote]
-[code]monospaced text[/code]	
+[url=https://en.wikipedia.org]English Wikipedia[/url]
 
 [style size="30px"]Large Text[/style]
 [style size="85"]Smaller Text[/style]
