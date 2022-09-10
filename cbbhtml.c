@@ -20,11 +20,11 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 	regex_t regex;
 	regmatch_t m[2];
 
-	char bb_tokens[][16] = {"0", "b", "i", "u", "s", "url", "quote", "code"};
-	char html_tokens_begin[][16] = {"0",	 "<strong>",	  "<em>",		  "<ins>",
-									"<del>", "<a href\"#\">", "<blockquote>", "<pre>"};
-	char html_tokens_end[][16] = {"0", "</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
-	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
+	const char bb_tokens[][16] = {"b", "i", "u", "s", "url", "quote", "code"};
+	const char html_tokens_begin[][16] = {"<strong>",	   "<em>",		   "<ins>", "<del>",
+										  "<a href\"#\">", "<blockquote>", "<pre>"};
+	const char html_tokens_end[][16] = {"</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
+	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]c
 	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]";
 
 	if (buffer_size == -1) {
@@ -50,11 +50,13 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 		memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
 		strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
 
-		for (symbol = 1; symbol < 8; symbol++) {
+		for (symbol = 0; symbol < 8; symbol++) {
 			if (!strcmp(subgroup, bb_tokens[symbol]))
 				break;
 		}
+
 		int bbt_len = strlen(bb_tokens[symbol]);
+		printf("%s, %d, %d\n", *buffer, strlen(buffer), buffer_size);
 		str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, html_tokens_end[symbol]);
 		str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
 	}
@@ -69,8 +71,8 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
  * @param ptr_len lenght of word to be replaced
  * @param substr substring to take prt1's place
  */
-char *str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
-	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + ptr_len + strlen(substr)));
+void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
+	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr))));
 	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
 	memset(prestr, '\0', sizeof(strlen(*buf)));
 	memset(poststr, '\0', sizeof(strlen(*buf)));
@@ -80,15 +82,21 @@ char *str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t pt
 
 	strcat(prestr, substr);
 	strcat(prestr, poststr);
-
-	if (*buf_size < strlen(prestr)) {
-		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1);
+	printf("%s : %d size : Original size: %d : substr size:%d\n\n\n", prestr, strlen(prestr), strlen(*buf),
+		   strlen(substr));
+	if (*buf_size <= strlen(prestr)) {
+		/*
+			R: 75 -- Reallocs to 75 correctly
+			R: 80 -- Reallocs to 80 correctly
+			R: 112 -- DOES NOT Reallocs to 112 correctly :(
+		 */
+		printf("R: %d\n", strlen(prestr));
+		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1); // I'm not sure I'm doing this correctly
 		*buf_size = strlen(prestr) + 1;
+		// ERROR: mremap_chunk(): invalid pointer
 	}
 
 	strcpy(*buf, prestr);
 	free(prestr);
 	free(poststr);
-
-	return *buf;
 }
