@@ -83,14 +83,8 @@ void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr
 	strcat(prestr, substr);
 	strcat(prestr, poststr);
 	if (*buf_size <= strlen(prestr)) {
-		/*
-			R: 75 -- Reallocs to 75 correctly
-			R: 80 -- Reallocs to 80 correctly
-			R: 112 -- DOES NOT Reallocs to 112 correctly :(
-		 */
 		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1); // I'm not sure I'm doing this correctly
 		*buf_size = strlen(prestr);
-		// ERROR: mremap_chunk(): invalid pointer
 	}
 
 	strcpy(*buf, prestr);
