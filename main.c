@@ -4,8 +4,8 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-	char bbcode[1024] = "ASD[b]ASD[code]ASD[/b]asSDAAS[/code]";
+	char bbcode[1024] = "ASsdfsdfD[b]ASDasdasd[code]ASDasdasdasdasd[/b]asSDAdsfsdfsAS[/code]";
 	char *buf;
 	printf("%d\n", bbcodetohtml_simple(bbcode, &buf, -1));
-	printf("str:%s mem:%d\n\n", buf, (void *)&buf);
+	printf("\nstr:%s mem:%d\n\n", buf, (void *)&buf);
 }
