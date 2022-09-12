@@ -4,10 +4,10 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-	char bbcode[1024] =
-		"ASsdfsdfD[b]ASDasdasd[code]ASDasdasdasdasd[/b]asSDAdsfsdfsAS[/code]"
-		"[img]https://external-content.duckduckgo.com/iu/"
-		"?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.ljYL65wDRmi1J9CBWthjxAHaE8%26pid%3DApi&f=1[/img]";
+	char bbcode[1024] = "ASsdfsdfD[b]ASDasdasd[code]ASDasdasdasdasd[/b]asSDAdsfsdfsAS[/code]"
+						"[img]https://external-content.duckduckgo.com/iu/"
+						"?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.ljYL65wDRmi1J9CBWthjxAHaE8%26pid%3DApi&f=1[/"
+						"img]https://external-conte";
 	char *buf;
 	printf("%d\n", bbcodetohtml_simple(bbcode, &buf, -1));
 	printf("\nstr:%s mem:%d\n", buf, (void *)&buf);
