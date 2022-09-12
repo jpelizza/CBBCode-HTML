@@ -18,14 +18,17 @@
  */
 int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 	regex_t regex;
-	regmatch_t m[2];
+	regmatch_t m[4];
 
-	const char bb_tokens[][16] = {"b", "i", "u", "s", "url", "quote", "code"};
+	const char bb_tokens[][16] = {"b", "i", "u", "s", "url", "quote", "code", "img"};
 	const char html_tokens_begin[][16] = {"<strong>",	   "<em>",		   "<ins>", "<del>",
-										  "<a href\"#\">", "<blockquote>", "<pre>"};
-	const char html_tokens_end[][16] = {"</strong>", "</em>", "</ins>", "</del>", "</a>", "</blockquote>", "</pre>"};
-	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]c
-	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]";
+										  "<a href\"#\">", "<blockquote>", "<pre>", "<img src='"};
+	const char html_tokens_end[][16] = {"</strong>", "</em>",		  "</ins>", "</del>",
+										"</a>",		 "</blockquote>", "</pre>", "' />"};
+	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
+	// REGEX IMAGE: \[img\](.*?)\[\/img\]
+	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]|" // matches 1
+						  "\\[(img)\\].*?\\[(\\/img)\\]";				   // matches 2 and 3
 
 	if (buffer_size == -1) {
 		*buffer = (char *)malloc((sizeof(char) * strlen(bbcode)) + 1);
@@ -44,20 +47,46 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 	}
 
 	// Search for all instances of regex from left to right
-	while (regexec(&regex, *buffer, 2, m, 0) != REG_NOMATCH) {
+	while (regexec(&regex, *buffer, 4, m, 0) != REG_NOMATCH) {
 		int symbol;
-		char *subgroup = (char *)malloc(sizeof(char) * (m[1].rm_eo - m[1].rm_so + 1));
-		memset(subgroup, '\0', m[1].rm_eo - m[1].rm_so + 1);
-		strncpy(subgroup, *buffer + m[1].rm_so, m[1].rm_eo - m[1].rm_so);
-
-		for (symbol = 0; symbol < 7; symbol++) {
-			if (!strcmp(subgroup, bb_tokens[symbol]))
-				break;
+		char *subgroup;
+		for (int i = 1; i < 3; i++) {
+			if (m[i].rm_eo != -1) {
+				subgroup = (char *)malloc(sizeof(char) * (m[i].rm_eo - m[i].rm_so + 1));
+				memset(subgroup, '\0', m[i].rm_eo - m[i].rm_so + 1);
+				strncpy(subgroup, *buffer + m[i].rm_so, m[i].rm_eo - m[i].rm_so);
+			}
 		}
 
-		int bbt_len = strlen(bb_tokens[symbol]);
-		str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, html_tokens_end[symbol]);
-		str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
+		// REPLACES FOR: "b", "i", "u", "s", "url", "quote", "code"
+		for (symbol = 0; symbol < 8; symbol++) {
+			int bbt_len;
+			if (!strcmp(subgroup, bb_tokens[symbol])) {
+				bbt_len = strlen(bb_tokens[symbol]);
+				str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3,
+							html_tokens_end[symbol]);
+				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
+				break;
+			}
+			// REPLACES FOR: "img"
+			else if (!strcmp(subgroup, bb_tokens[symbol])) {
+				bbt_len = 3;
+				int tmp_replacer_size =
+					(m[1].rm_eo - m[1].rm_so + strlen(html_tokens_begin[7]) + strlen(html_tokens_end[7]) + 1);
+				char *tmp_replacer = (char *)malloc(tmp_replacer_size);
+				memset(tmp_replacer, '\0', tmp_replacer_size);
+				strcpy(tmp_replacer, html_tokens_begin[7]);
+				strncat(tmp_replacer, *buffer + m[2].rm_so + 4, (m[3].rm_eo - 6) - m[2].rm_eo);
+				strcat(tmp_replacer, html_tokens_end[7]);
+
+				str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, "");
+				// replace inicio
+				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, (bbt_len + 2) + ((m[3].rm_eo - 6) - m[2].rm_eo),
+							tmp_replacer);
+				break;
+			}
+		}
+		free(subgroup);
 	}
 	return 0;
 }
@@ -71,10 +100,10 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
  * @param substr substring to take prt1's place
  */
 void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
-	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr))));
-	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
-	memset(prestr, '\0', sizeof((strlen(*buf) + (strlen(substr)))));
-	memset(poststr, '\0', sizeof(strlen(*buf)));
+	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr)) + 1));
+	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf) + 1);
+	memset(prestr, '\0', sizeof((strlen(*buf) + (strlen(substr)))) + 1);
+	memset(poststr, '\0', sizeof(strlen(*buf)) + 1);
 
 	strncpy(prestr, *buf, (size_t)(ptr - *buf));
 	memset(prestr + (size_t)(ptr - *buf), '\0', 1);
