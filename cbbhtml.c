@@ -83,6 +83,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 				// replace inicio
 				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, (bbt_len + 2) + ((m[3].rm_eo - 6) - m[2].rm_eo),
 							tmp_replacer);
+				free(tmp_replacer);
 				break;
 			}
 		}
