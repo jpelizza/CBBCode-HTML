@@ -11,6 +11,7 @@ Running this regex on a loop should find every possible
 [url]https://en.wikipedia.org[/url]
 [quote]quoted text[/quote]
 [code]monospaced text[/code]	
+[img]LINK[/img]
 
 The second category is complex bbcode, which take some kind of input alongside the bbcode itself:
 [url=https://en.wikipedia.org]English Wikipedia[/url]
