@@ -7,6 +7,5 @@
 //     char *emoticons_url;
 // };
 
-int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size);
-int bbcodetohtml_complex(const char *bbcode, char **buffer, int buffer_size);
+int bbcodetohtml_simple(const char *bbcode, char **buffer);
 void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr);
