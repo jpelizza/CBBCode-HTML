@@ -28,15 +28,15 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
 	// REGEX IMAGE: \[img\](.*?)\[\/img\]
 	// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
-	PCRE2_SPTR pattern = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]|"				   // 2,3
-						 "\\[(img)\\].*?\\[(\\/img)\\]|"								   // 4,5,6,7
-						 "\\[((url|color)=)(#.{6}?|https?:\\/\\/.+?)\\](.*)?\\[\\/\\5\\]"; // 8,9,10,11,12,13,14,15
+	PCRE2_SPTR pattern = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]|"				 // 2,3
+						 "\\[(img)\\].*?\\[(\\/img)\\]|"								 // 4,5,6,7
+						 "\\[((url|color)=)(#.+?|https?:\\/\\/.+?)\\](.*?)\\[\\/\\5\\]"; // 8,9,10,11,12,13,14,15
 
 	const char bb_tokens[][32] = {"b", "i", "u", "s", "url", "quote", "code", "img", "url=", "color="};
 	const char html_tokens_begin[][32] = {"<strong>",	  "<em>",  "<ins>",		 "<del>",	   "<a href\"#\">",
-										  "<blockquote>", "<pre>", "<img src='", "<a href=\"", "<div style \"color"};
+										  "<blockquote>", "<pre>", "<img src='", "<a href=\"", "<div style=\"color:"};
 	const char html_tokens_end[][32] = {"</strong>",	 "</em>",  "</ins>", "</del>", "</a>",
-										"</blockquote>", "</pre>", "' />",	 "\">"};
+										"</blockquote>", "</pre>", "'/>",	 "\">",	   "\">"};
 
 	if (buffer_size == -1) {
 		*buffer = (char *)malloc((sizeof(char) * strlen(bbcode)) + 1);
@@ -97,7 +97,6 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 				strcpy(tmp_replacer, html_tokens_begin[7]);
 				strncat(tmp_replacer, *buffer + m[4] + 4, (m[7] - 6) - m[5]);
 				strcat(tmp_replacer, html_tokens_end[7]);
-
 				str_replace(buffer, &buffer_size, *buffer + m[1] - (bbt_len + 3), bbt_len + 3, "");
 				str_replace(buffer, &buffer_size, *buffer + m[0], (bbt_len + 2) + ((m[7] - 6) - m[5]), tmp_replacer);
 				free(tmp_replacer);
@@ -105,15 +104,14 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 			}
 		}
 		// REPLACE FOR "URL=" and "color="
-		// REPLACES FOR: "img"
 		//[5] 8,9,
 		//[6]10,11,
 		//[7]12,13
 		//[8]14,15
+		// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
+		//						   8|10       11|9|12                13 |14|15
 		if (!strcmp(subgroup, bb_tokens[8])) {
 			int symbol = 8;
-			int bbt_len = strlen(bb_tokens[symbol]);
-			printf("::3::\n");
 			int tmp_replacer_size = (8 + (m[13] - m[12]) + (m[15] - m[14]));
 			char *tmp_replacer = (char *)malloc(sizeof(char) * tmp_replacer_size);
 			memset(tmp_replacer, '\0', tmp_replacer_size);
@@ -125,7 +123,6 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 			str_replace(buffer, &buffer_size, *buffer + m[1] - 6, 6, "</a>");
 			str_replace(buffer, &buffer_size, *buffer + m[0], (m[13] - m[12]) + 6, tmp_replacer);
 			free(tmp_replacer);
-			continue;
 		} else if (!strcmp(subgroup, bb_tokens[9])) {
 			int symbol = 9;
 			int tmp_replacer_size = (8 + (m[13] - m[12]) + (m[15] - m[14]));
@@ -135,13 +132,9 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 			strcpy(tmp_replacer, html_tokens_begin[symbol]);
 			strncat(tmp_replacer, *buffer + m[12], (m[13] - m[12]));
 			strcat(tmp_replacer, html_tokens_end[symbol]);
-
-			str_replace(buffer, &buffer_size, *buffer + m[1] - 8, 15, "</div>");
-			printf("::4::\n");
-			str_replace(buffer, &buffer_size, *buffer + m[0], (m[13] - m[12]) + 6, tmp_replacer);
-			printf("::4::\n");
+			str_replace(buffer, &buffer_size, *buffer + m[1] - 8, 8, "</div>");
+			str_replace(buffer, &buffer_size, *buffer + m[0], (m[13] - m[12]) + 8, tmp_replacer);
 			free(tmp_replacer);
-			continue;
 		}
 		free(subgroup);
 	}
@@ -159,10 +152,11 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
  * @param substr substring to take prt1's place
  */
 void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
-	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr)) + 1));
-	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf) + 1);
-	memset(prestr, '\0', sizeof(strlen(*buf) + strlen(substr)) + 1);
-	memset(poststr, '\0', sizeof(strlen(*buf)) + 1);
+	printf("%d %d\n", strlen(*buf), strlen(substr));
+	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + strlen(substr)));
+	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
+	memset(prestr, '\0', sizeof(strlen(*buf) + strlen(substr)));
+	memset(poststr, '\0', sizeof(strlen(*buf)));
 
 	strncpy(prestr, *buf, (size_t)(ptr - *buf));
 	memset(prestr + (size_t)(ptr - *buf), '\0', 1);
@@ -174,7 +168,6 @@ void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr
 		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1); // I'm not sure I'm doing this correctly
 		*buf_size = strlen(prestr);
 	}
-
 	strcpy(*buf, prestr);
 	free(prestr);
 	free(poststr);
