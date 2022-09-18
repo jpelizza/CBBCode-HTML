@@ -1,10 +1,12 @@
 #include "cbbhtml.h"
 
 #include <assert.h>
-#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define PCRE2_CODE_UNIT_WIDTH 8
+#include <pcre2.h>
 
 /**
  * @brief Writes translated bbcode into buffer;
@@ -17,20 +19,24 @@
  * 2 if regex compilation error
  */
 int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
-	regex_t regex;
-	regmatch_t m[10];
+	pcre2_code *regex;
+	pcre2_match_data *matches = pcre2_match_data_create(16, NULL);
 
-	const char bb_tokens[][16] = {"b", "i", "u", "s", "url", "quote", "code", "img", "url=", "color="};
-	const char html_tokens_begin[][16] = {"<strong>",	  "<em>",  "<ins>",		 "<del>",	   "<a href\"#\">",
-										  "<blockquote>", "<pre>", "<img src='", "<a href=\"", "<div style \"color"};
-	const char html_tokens_end[][16] = {"</strong>",	 "</em>",  "</ins>", "</del>", "</a>",
-										"</blockquote>", "</pre>", "' />",	 "\">"};
+	PCRE2_SIZE erroffset, *m;
+	int errorcode;
+
 	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
 	// REGEX IMAGE: \[img\](.*?)\[\/img\]
 	// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
-	const char *reg_str = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]|"				  // matches 1
-						  "\\[(img)\\].*?\\[(\\/img)\\]|"								  // matches 2 and 3
-						  "\\[((url|color)=)(#.+?|https?:\\/\\/.+?)\\](.*)?\\[\\/\\5\\]"; // matches 4, 5, 6 and 7
+	PCRE2_SPTR pattern = "\\[(b|i|u|s|url|quote|code)\\].*?\\[\\/\\1\\]|"				   // 2,3
+						 "\\[(img)\\].*?\\[(\\/img)\\]|"								   // 4,5,6,7
+						 "\\[((url|color)=)(#.{6}?|https?:\\/\\/.+?)\\](.*)?\\[\\/\\5\\]"; // 8,9,10,11,12,13,14,15
+
+	const char bb_tokens[][32] = {"b", "i", "u", "s", "url", "quote", "code", "img", "url=", "color="};
+	const char html_tokens_begin[][32] = {"<strong>",	  "<em>",  "<ins>",		 "<del>",	   "<a href\"#\">",
+										  "<blockquote>", "<pre>", "<img src='", "<a href=\"", "<div style \"color"};
+	const char html_tokens_end[][32] = {"</strong>",	 "</em>",  "</ins>", "</del>", "</a>",
+										"</blockquote>", "</pre>", "' />",	 "\">"};
 
 	if (buffer_size == -1) {
 		*buffer = (char *)malloc((sizeof(char) * strlen(bbcode)) + 1);
@@ -39,36 +45,44 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 		*buffer = (char *)realloc(*buffer, (sizeof(char) * strlen(bbcode)) + 1);
 		buffer_size = strlen(bbcode) + 1;
 	}
-	if (*buffer == NULL || reg_str == NULL)
+	if (*buffer == NULL || regex == NULL)
 		return 1;
 
 	strcpy(*buffer, bbcode);
 
-	if (regcomp(&regex, reg_str, REG_EXTENDED) != 0) {
+	regex = pcre2_compile(pattern, -1, 0, &errorcode, &erroffset, NULL);
+	if (regex == NULL) {
 		return 2;
 	}
 
 	// Search for all instances of regex from left to right
-	while (regexec(&regex, *buffer, 10, m, 0) != REG_NOMATCH) {
+	while (pcre2_match(regex, *buffer, -1, 0, 0, matches, NULL) > 0) {
+		m = pcre2_get_ovector_pointer(matches);
+		for (int i = 0; i < 16; i++) {
+			printf("[%d] - %d\n", i, m[i]);
+			printf("%s\n", *buffer + m[i]);
+		}
+
 		int symbol;
 		char *subgroup;
-		for (int i = 1; i < 10; i++) {
-			if (m[i].rm_eo != -1) {
-				subgroup = (char *)malloc(sizeof(char) * (m[i].rm_eo - m[i].rm_so + 1));
-				memset(subgroup, '\0', m[i].rm_eo - m[i].rm_so + 1);
-				strncpy(subgroup, *buffer + m[i].rm_so, m[i].rm_eo - m[i].rm_so);
+		for (int i = 2; i < 10; i += 2) {
+			if (m[i] != -1) {
+				subgroup = (char *)malloc(sizeof(char) * (m[i + 1] - m[i] + 1));
+				memset(subgroup, '\0', m[i + 1] - m[i] + 1);
+				strncpy(subgroup, *buffer + m[i], m[i + 1] - m[i]);
 				break;
 			}
 		}
+		printf("sub: %s\n", subgroup);
 
 		for (symbol = 0; symbol < 7; symbol++) {
 			int bbt_len = strlen(bb_tokens[symbol]);
 			// REPLACES FOR: "b", "i", "u", "s", "url", "quote", "code"
+			// 2,3
 			if (!strcmp(subgroup, bb_tokens[symbol])) {
 				printf("::1::\n");
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3,
-							html_tokens_end[symbol]);
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, bbt_len + 2, html_tokens_begin[symbol]);
+				str_replace(buffer, &buffer_size, *buffer + m[1] - (bbt_len + 3), bbt_len + 3, html_tokens_end[symbol]);
+				str_replace(buffer, &buffer_size, *buffer + m[0], bbt_len + 2, html_tokens_begin[symbol]);
 				break;
 			}
 		}
@@ -77,49 +91,62 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 			// REPLACES FOR: "img"
 			if (!strcmp(subgroup, bb_tokens[symbol])) {
 				printf("::2::\n");
-				int tmp_replacer_size =
-					(m[0].rm_eo - m[0].rm_so) + (strlen(html_tokens_begin[7]) + strlen(html_tokens_end[7]));
+				int tmp_replacer_size = (m[1] - m[0]) + (strlen(html_tokens_begin[7]) + strlen(html_tokens_end[7]));
 				char *tmp_replacer = (char *)malloc(sizeof(char) * (tmp_replacer_size));
 				memset(tmp_replacer, '\0', tmp_replacer_size);
 				strcpy(tmp_replacer, html_tokens_begin[7]);
-				strncat(tmp_replacer, *buffer + m[2].rm_so + 4, (m[3].rm_eo - 6) - m[2].rm_eo);
+				strncat(tmp_replacer, *buffer + m[4] + 4, (m[7] - 6) - m[5]);
 				strcat(tmp_replacer, html_tokens_end[7]);
 
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - (bbt_len + 3), bbt_len + 3, "");
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, (bbt_len + 2) + ((m[3].rm_eo - 6) - m[2].rm_eo),
-							tmp_replacer);
+				str_replace(buffer, &buffer_size, *buffer + m[1] - (bbt_len + 3), bbt_len + 3, "");
+				str_replace(buffer, &buffer_size, *buffer + m[0], (bbt_len + 2) + ((m[7] - 6) - m[5]), tmp_replacer);
 				free(tmp_replacer);
-				break;
+				continue;
 			}
 		}
-		for (symbol = 8; symbol < 10; symbol++) {
+		// REPLACE FOR "URL=" and "color="
+		// REPLACES FOR: "img"
+		//[5] 8,9,
+		//[6]10,11,
+		//[7]12,13
+		//[8]14,15
+		if (!strcmp(subgroup, bb_tokens[8])) {
+			int symbol = 8;
 			int bbt_len = strlen(bb_tokens[symbol]);
-			// REPLACE FOR "URL=" and "color="
-			if (!strcmp(subgroup, bb_tokens[symbol])) {
-				printf("::3::\n");
-				printf("subgroup: %s\n", subgroup);
-				printf("symbol: %d\n", symbol);
-				printf("html_b: %s\n", html_tokens_begin[symbol]);
-				printf("html_e: %s\n", html_tokens_end[symbol]);
-				printf("1 str: %s\n\n", *buffer);
-				int tmp_replacer_size = (8 + (m[6].rm_eo - m[6].rm_so) + (m[7].rm_eo - m[7].rm_so));
-				char *tmp_replacer = (char *)malloc(sizeof(char) * tmp_replacer_size);
-				memset(tmp_replacer, '\0', tmp_replacer_size);
+			printf("::3::\n");
+			int tmp_replacer_size = (8 + (m[13] - m[12]) + (m[15] - m[14]));
+			char *tmp_replacer = (char *)malloc(sizeof(char) * tmp_replacer_size);
+			memset(tmp_replacer, '\0', tmp_replacer_size);
 
-				strcpy(tmp_replacer, html_tokens_begin[symbol]);
-				strncat(tmp_replacer, *buffer + m[6].rm_so, (m[6].rm_eo - m[6].rm_so));
-				strcat(tmp_replacer, html_tokens_end[symbol]);
+			strcpy(tmp_replacer, html_tokens_begin[symbol]);
+			strncat(tmp_replacer, *buffer + m[12], (m[13] - m[12]));
+			strcat(tmp_replacer, html_tokens_end[symbol]);
 
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_eo - 6, 6, "</a>");
-				str_replace(buffer, &buffer_size, *buffer + m[0].rm_so, (m[6].rm_eo - m[6].rm_so) + 6, tmp_replacer);
-				printf("2 str: %s\n\n", *buffer);
-				free(tmp_replacer);
-				break;
-			}
-			// REPLACE FOR LIST
+			str_replace(buffer, &buffer_size, *buffer + m[1] - 6, 6, "</a>");
+			str_replace(buffer, &buffer_size, *buffer + m[0], (m[13] - m[12]) + 6, tmp_replacer);
+			free(tmp_replacer);
+			continue;
+		} else if (!strcmp(subgroup, bb_tokens[9])) {
+			int symbol = 9;
+			int tmp_replacer_size = (8 + (m[13] - m[12]) + (m[15] - m[14]));
+			char *tmp_replacer = (char *)malloc(sizeof(char) * tmp_replacer_size);
+			memset(tmp_replacer, '\0', tmp_replacer_size);
+
+			strcpy(tmp_replacer, html_tokens_begin[symbol]);
+			strncat(tmp_replacer, *buffer + m[12], (m[13] - m[12]));
+			strcat(tmp_replacer, html_tokens_end[symbol]);
+
+			str_replace(buffer, &buffer_size, *buffer + m[1] - 8, 15, "</div>");
+			printf("::4::\n");
+			str_replace(buffer, &buffer_size, *buffer + m[0], (m[13] - m[12]) + 6, tmp_replacer);
+			printf("::4::\n");
+			free(tmp_replacer);
+			continue;
 		}
 		free(subgroup);
 	}
+	pcre2_match_data_free(matches);
+	pcre2_code_free(regex);
 	return 0;
 }
 
@@ -134,7 +161,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer, int buffer_size) {
 void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
 	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + (strlen(substr)) + 1));
 	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf) + 1);
-	memset(prestr, '\0', sizeof((strlen(*buf) + (strlen(substr)))) + 1);
+	memset(prestr, '\0', sizeof(strlen(*buf) + strlen(substr)) + 1);
 	memset(poststr, '\0', sizeof(strlen(*buf)) + 1);
 
 	strncpy(prestr, *buf, (size_t)(ptr - *buf));
