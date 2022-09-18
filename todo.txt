@@ -15,12 +15,13 @@ Running this regex on a loop should find every possible
 
 The second category is complex bbcode, which take some kind of input alongside the bbcode itself:
 [url=https://en.wikipedia.org]English Wikipedia[/url]
-[quote="author"]quoted text[/quote]
+[color=#FF00FF]Text in fuchsia[/color]
+
+//
 [style size="30px"]Large Text[/style]
 [style size="85"]Smaller Text[/style]
 [style color="fuchsia"]Text in fuchsia[/style] or
 [style color=#FF00FF]Text in fuchsia[/style] or
-[color=#FF00FF]Text in fuchsia[/color]
 
 simple list bbcode 
 [list]
