@@ -129,33 +129,3 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	pcre2_code_free(regex);
 	return 0;
 }
-
-/**
- * @brief Replaces on str, from ptr1 to ptr1+len with ptr2
- *
- * @param buf buffer string to have text replaced
- * @param ptr pointer to where replacing will take place
- * @param ptr_len lenght of word to be replaced
- * @param substr substring to take prt1's place
- */
-void str_replace(char **buf, unsigned int *buf_size, const char *ptr, size_t ptr_len, const char *substr) {
-	printf("%d %d\n", strlen(*buf), strlen(substr));
-	char *prestr = (char *)malloc(sizeof(char) * (strlen(*buf) + strlen(substr)));
-	char *poststr = (char *)malloc(sizeof(char) * strlen(*buf));
-	memset(prestr, '\0', sizeof(strlen(*buf) + strlen(substr)));
-	memset(poststr, '\0', sizeof(strlen(*buf)));
-
-	strncpy(prestr, *buf, (size_t)(ptr - *buf));
-	memset(prestr + (size_t)(ptr - *buf), '\0', 1);
-	strcpy(poststr, *buf + (size_t)(ptr - *buf + ptr_len));
-
-	strcat(prestr, substr);
-	strcat(prestr, poststr);
-	if (*buf_size <= strlen(prestr)) {
-		*buf = (char *)realloc(*buf, (sizeof(char *) * strlen(prestr)) + 1); // I'm not sure I'm doing this correctly
-		*buf_size = strlen(prestr);
-	}
-	strcpy(*buf, prestr);
-	free(prestr);
-	free(poststr);
-}
