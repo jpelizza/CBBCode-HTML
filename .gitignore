@@ -2,3 +2,4 @@ a.out
 .vscode
 tinyexample.c
 make.sh
+core.*
