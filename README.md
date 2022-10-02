@@ -3,9 +3,12 @@ posteriorly adding support to custom emoticons and tags.
 
 I'm using https://www.bbcode.org/reference.php as a reference of all tags that should be implemented by default.
 
-Currently supported:
-\[b] \[i] \[u] \[s] \[color=] \[quote] \[url] \[url=] \[img] \[code]
+supported:
+\[b] \[i] \[u] \[s] \[color=] \[quote] \[url] \[url=]  \[code]  \[center] \[left] \[right] \[spoiler]
+\[img]
 
-currenty NOT supported:
-\[size=] \[center] \[left] \[right] \[quote=] \[spoiler] \[spoiler=] \[img width={width} height={height}]
-\[ul] \[li] \[code={language}] \[pre] \[table] \[tr] \[th] \[youtube]
+working on:
+\[size=] \[quote=]
+NOT supported:
+\[spoiler=] \[img width={width} height={height}] 
+\[ul] \[li] \[code={language}] \[table] \[tr] \[th] 
