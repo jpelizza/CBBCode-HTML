@@ -8,8 +8,9 @@ supported:
 \[img] \[url=]
 
 working on:
-\[color=]
+\[color=] \[img width={width} height={height}] 
+\[size=]
 
 NOT supported:
-\[size=] \[quote=] \[spoiler=] \[img width={width} height={height}] 
+ \[quote=] \[spoiler=] 
 \[ul] \[li] \[code={language}] \[table] \[tr] \[th] 

@@ -27,9 +27,10 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
 	// REGEX IMAGE: \[img\](.*?)\[\/img\]
 	// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
-	PCRE2_SPTR pattern = "\\[(b|i|u|s|center|left|right|quote|spoiler|code|img)\\](.*?)\\[\\/\\1\\]|" // (2,3)(4,5)
-						 "\\[(url)(=https?:\\/\\/.+?)?\\](.*?)\\[\\/\\3\\]"; // (6,7)(8,9)(10,11)
-
+	PCRE2_SPTR pattern =
+		"\\[(b|i|u|s|center|left|right|quote|spoiler|code)\\](.*?)\\[\\/\\1\\]|"			 // (2,3)(4,5)
+		"\\[(url)(=https?:\\/\\/.+?)?\\](.*?)\\[\\/\\3\\]"									 // (6,7)(8,9)(10,11)
+		"\\[(img)(\\s+(\\d+)x(\\d+)|\\s+width=(\\d+)\\s+height=(\\d+))?\\](.*)\\[\\/img\\]"; //(12,13)(14,15)(16,17)(18,19)(20,21)
 	const char BB_TAGS[][16] = {"b",	 "i",	  "u",		 "s",	"center", "left",
 								"right", "quote", "spoiler", "url", "code",	  "img"};
 	const char HTML_OPEN[][64] = {"<strong>",
