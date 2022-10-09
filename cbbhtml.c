@@ -20,7 +20,7 @@
  */
 int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	pcre2_code *regex = NULL;
-	pcre2_match_data *matches = pcre2_match_data_create(16, NULL);
+	pcre2_match_data *matches = pcre2_match_data_create(32, NULL);
 	PCRE2_SIZE buffer_size = (*buffer == NULL) ? -1 : (PCRE2_SIZE)strlen(*buffer);
 	PCRE2_SIZE erroffset, *m;
 	int errorcode;
@@ -29,8 +29,9 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
 	PCRE2_SPTR pattern =
 		"\\[(b|i|u|s|center|left|right|quote|spoiler|code)\\](.*?)\\[\\/\\1\\]|"			 // (2,3)(4,5)
-		"\\[(url)(=https?:\\/\\/.+?)?\\](.*?)\\[\\/\\3\\]"									 // (6,7)(8,9)(10,11)
+		"\\[(url)(=https?:\\/\\/.+?)?\\](.*?)\\[\\/url\\]|"									 // (6,7)(8,9)(10,11)
 		"\\[(img)(\\s+(\\d+)x(\\d+)|\\s+width=(\\d+)\\s+height=(\\d+))?\\](.*)\\[\\/img\\]"; //(12,13)(14,15)(16,17)(18,19)(20,21)
+
 	const char BB_TAGS[][16] = {"b",	 "i",	  "u",		 "s",	"center", "left",
 								"right", "quote", "spoiler", "url", "code",	  "img"};
 	const char HTML_OPEN[][64] = {"<strong>",
@@ -44,7 +45,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 								  "<span class=\"spoiler\">",
 								  "<a href=\"",
 								  "<code>",
-								  "<img src="};
+								  "<img src=\""};
 	const char HTML_CLOSE[][16] = {"", "", "", "", "", "", "", "", "", "\">", "", ">"};
 	const char HTML_END[][16] = {"</strong>", "</em>",		   "</ins>",  "</del>", "</div>",  "</div>",
 								 "</div>",	  "</quoteblock>", "</span>", "</a>",	"</code>", ""};
@@ -73,7 +74,6 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		m = pcre2_get_ovector_pointer(matches);
 		int symbol, sp;
 		char *subgroup = NULL;
-
 		// Search for all instances of regex from left to right
 		for (sp = 2; sp < 24; sp += 2) {
 			if (m[sp] != -1) {
@@ -99,7 +99,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		// 2*TAG since tag both opens and closes
 		signed long REPLACE_SIZE = OPEN_SIZE + CLOSE_SIZE + END_SIZE + 5 - (2 * TAG_SIZE);
 		// tmp_replacer_size = len(group_1)+REPLACE_SIZE
-		int tmp_replacer_size = (m[1] - m[0]) + REPLACE_SIZE;
+		int tmp_replacer_size = (m[1] - m[0]) + REPLACE_SIZE + 16;
 		char *tmp_replacer = (char *)malloc(sizeof(char) * (tmp_replacer_size));
 
 		// REPLACING FOR SIMPLE
@@ -113,10 +113,11 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 			strncat(tmp_replacer, *buffer + m[sp + 1] + 1, m[1] - (m[sp + 1] + TAG_SIZE + 4));
 			strcat(tmp_replacer, HTML_CLOSE[symbol]);
 			strcat(tmp_replacer, HTML_END[symbol]);
-		} else if (sp == 6) { //\[(url)(=https?:\/\/.+?)\](.*?)\[\/\3\]
-							  // (6,7)       (8,9)        (10,11)
-							  //"aaa[url=https://link.com]bbb[/url]ccc"
-							  //"aaa[url]bbb[/url]ccc"
+		} else if (sp == 6) {
+			//\[(url)(=https?:\/\/.+?)\](.*?)\[\/\3\]
+			// (6,7)       (8,9)        (10,11)
+			//"aaa[url=https://link.com]bbb[/url]ccc"
+			//"aaa[url]bbb[/url]ccc"
 			if (m[8] == -1) { // parsing [url]
 				strcpy(tmp_replacer, HTML_OPEN[symbol]);
 				strcat(tmp_replacer, "#");
@@ -127,14 +128,45 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 				strcpy(tmp_replacer, HTML_OPEN[symbol]);
 				strncat(tmp_replacer, *buffer + m[sp + 2] + 1, (m[sp + 3] - m[sp + 2]) - 1);
 				strcat(tmp_replacer, HTML_CLOSE[symbol]);
-				// error aqui
 				strncat(tmp_replacer, *buffer + m[sp + 4], (m[sp + 5] - m[sp + 4]));
-				// error aqui
 				strcat(tmp_replacer, HTML_END[symbol]);
+			}
+		} else if (sp == 12) {
+			//"\[(img)(\s+(\d+)x(\d+)|\s+width=(\d+)\s+height=(\d+))?\](.*)\[\/img\]";
+			//  (12,13)(14                                        ,15)
+			//	         (16,17)(18,19)       (20,21)        (22,23)  (24,25)
+			if (m[12] != -1) {					  // parsing [img*]
+				if (m[16] == -1 && m[20] == -1) { // parsing [img]
+					strcpy(tmp_replacer, HTML_OPEN[symbol]);
+					strncat(tmp_replacer, *buffer + m[sp + 1] + 1, m[1] - (m[sp + 1] + TAG_SIZE + 4));
+					strcat(tmp_replacer, HTML_CLOSE[symbol]);
+					strcat(tmp_replacer, HTML_END[symbol]);
+				} else if (m[16] != -1 && m[20] == -1) { // parsing [img \dx\d]
+					//<img src="img_girl.jpg" alt="Girl in a jacket" width="500" height="600">
+					//"aaa[img 120x320]bbb[/img]ccc",
+					strcpy(tmp_replacer, HTML_OPEN[symbol]);
+					strncat(tmp_replacer, *buffer + m[sp + 12], (m[sp + 13] - m[sp + 12]));
+					strcat(tmp_replacer, " width=");
+					strncat(tmp_replacer, *buffer + m[sp + 4], (m[sp + 5] - m[sp + 4]));
+					strcat(tmp_replacer, " height=");
+					strncat(tmp_replacer, *buffer + m[sp + 6], (m[sp + 7] - m[sp + 6]));
+					strcat(tmp_replacer, HTML_CLOSE[symbol]);
+					strncat(tmp_replacer, *buffer + m[sp + 8], (m[sp + 9] - m[sp + 8]));
+					strcat(tmp_replacer, HTML_END[symbol]);
+				} else { // parsing [img width=\d height=\d]
+					strcpy(tmp_replacer, HTML_OPEN[symbol]);
+					strncat(tmp_replacer, *buffer + m[sp + 12], (m[sp + 13] - m[sp + 12]));
+					strcat(tmp_replacer, "\" width=");
+					strncat(tmp_replacer, *buffer + m[sp + 8], (m[sp + 9] - m[sp + 8]));
+					strcat(tmp_replacer, " height=");
+					strncat(tmp_replacer, *buffer + m[sp + 10], (m[sp + 11] - m[sp + 10]));
+					strcat(tmp_replacer, HTML_CLOSE[symbol]);
+					strcat(tmp_replacer, HTML_END[symbol]);
+				}
 			}
 		}
 
-		PCRE2_UCHAR output[1024] = "";
+		PCRE2_UCHAR output[3072] = "";
 		PCRE2_SIZE outlen = sizeof(output) / sizeof(PCRE2_UCHAR);
 
 		pcre2_substitute(regex,						// code
@@ -151,8 +183,8 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		);
 		strcpy(*buffer, output);
 		memset(output, '\0', outlen);
-		free(tmp_replacer);
 		free(subgroup);
+		free(tmp_replacer);
 	}
 	// pcre2_code_free(regex);
 	pcre2_match_data_free(matches);

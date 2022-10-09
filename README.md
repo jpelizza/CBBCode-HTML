@@ -5,10 +5,10 @@ I'm using https://www.bbcode.org/reference.php as a reference of all tags that s
 
 supported:
 \[b] \[i] \[u] \[s] \[quote] \[url] \[url=]  \[code]  \[center] \[left] \[right] \[spoiler]
-\[img] \[url=]
+\[img] \[url=]  \[img width={width} height={height}]  \[img {width}x{height}] 
 
 working on:
-\[color=] \[img width={width} height={height}] 
+\[color=]
 \[size=]
 
 NOT supported:

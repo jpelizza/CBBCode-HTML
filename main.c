@@ -13,19 +13,19 @@ int main(int argc, char *argv[]) {
 						   "aaa[right]bbb[/right]ccc",
 						   "aaa[quote]bbb[/quote]ccccc",
 						   "aaa[spoiler]bbb[/spoiler]ccc",
-						   "aaa[url]bbb[/url]ccc",
 						   "aaa[code]bbb[/code]ccc",
-						   "aaa[img]bbb[/img]ccc",
-						   "aaa[img=https://image.jpg]bbb[/img]ccc",
 						   "aaa[url=https://link.com]bbb[/url]ccc",
-						   "aaa[url]bbb[/url]ccc"};
+						   "aaa[url]bbb[/url]ccc",
+						   "aaa[img]https://image.com/img.jpg[/img]ccc",
+						   "aaa[img 120x320]https://image.com/img.jpg[/img]ccc",
+						   "aaa[img width=320 height=120]https://image.com/img.jpg[/img]ccc"};
 
-	for (int i = 0; i < 15; i++) {
+	for (int i = 12; i < 16; i++) {
 		char *buf = NULL;
-		printf("---\n");
 		printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
 		printf("Ori:%s mem:%d\n", bbcode[i]);
 		printf("Str:%s mem:%d\n", buf, (void *)&buf);
 		free(buf);
 	}
+	printf("\n\n\n\n\n\n\n");
 }
