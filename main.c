@@ -20,10 +20,11 @@ int main(int argc, char *argv[]) {
 						   "aaa[img 120x320]https://image.com/img.jpg[/img]ccc",
 						   "aaa[img width=320 height=120]https://image.com/img.jpg[/img]ccc",
 						   "aaa[color=green]green[/color]ccc",
-						   "aaa[color=#00AA00]green[/color]ccc"};
+						   "aaa[color=#00AA00]green[/color]ccc",
+						   "aaa[size=11]size 11 px[/size]ccc"};
 
 	printf("\n\n\n\n\n\n\n");
-	for (int i = 15; i < 18; i++) {
+	for (int i = 0; i < 17; i++) {
 		char *buf = NULL;
 		printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
 		printf("Ori:%s mem:%d\n", bbcode[i]);

@@ -32,10 +32,11 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		"\\[(b|i|u|s|center|left|right|quote|spoiler|code)\\](.*?)\\[\\/\\1\\]|" // (2,3)(4,5)
 		"\\[(url)(=https?:\\/\\/.+?)?\\](.*?)\\[\\/url\\]|"						 // (6,7)(8,9)(10,11)
 		"\\[(img)(\\s+(\\d+)x(\\d+)|\\s+width=(\\d+)\\s+height=(\\d+))?\\](.*)\\[\\/img\\]|" // (12,13)(14,15)(16,17)(18,19)(20,21)(22,23)(24,25)
-		"\\[(color)=(red|green|blue|\\#[\\dA-F]{6})\\](.*)\\[\\/color\\]"; // (26,27)(28,29)(30,31)
+		"\\[(color)=(red|green|blue|\\#[\\dA-F]{6})\\](.*)\\[\\/color\\]|" // (26,27)(28,29)(30,31)
+		"\\[(size)=(\\d*)\\](.*)\\[\\/size\\]";							   // (32,33)(34,35)(36,37)
 
-	const char BB_TAGS[][64] = {"b",	 "i",		"u",   "s",	   "center", "left", "right",
-								"quote", "spoiler", "url", "code", "img",	 "color"};
+	const char BB_TAGS[][64] = {"b",	 "i",		"u",   "s",	   "center", "left",  "right",
+								"quote", "spoiler", "url", "code", "img",	 "color", "size"};
 	const char HTML_OPEN[][64] = {"<strong>",
 								  "<em>",
 								  "<ins>",
@@ -48,10 +49,11 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 								  "<a href=\"",
 								  "<code>",
 								  "<img src=\"",
-								  "<div style=\"color:"};
-	const char HTML_CLOSE[][64] = {"", "", "", "", "", "", "", "", "", "\">", "", ">", ";\">"};
+								  "<div style=\"color:",
+								  "<div style=\"font-size:"};
+	const char HTML_CLOSE[][64] = {"", "", "", "", "", "", "", "", "", "\">", "", ">", ";\">", "px;\">"};
 	const char HTML_END[][64] = {"</strong>",	  "</em>",	 "</ins>", "</del>",  "</div>", "</div>", "</div>",
-								 "</quoteblock>", "</span>", "</a>",   "</code>", "",		"</div>"};
+								 "</quoteblock>", "</span>", "</a>",   "</code>", "",		"</div>", "</div>"};
 	// MALLOC BUFFER
 	if (buffer_size == -1) {
 		*buffer = (char *)malloc(sizeof(char) * (strlen(bbcode) + 1));
@@ -78,19 +80,19 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		int symbol, sp;
 		char *subgroup = NULL;
 		// Search for all instances of regex from left to right
-		for (sp = 2; sp < 28; sp += 2) {
+		for (sp = 2; sp < 38; sp += 2) {
 			if (m[sp] != -1) {
 				subgroup = (char *)malloc(sizeof(char) * (m[sp + 1] - m[sp] + 1));
 				memset(subgroup, '\0', m[sp + 1] - m[sp] + 1);
 				strncpy(subgroup, *buffer + m[sp], m[sp + 1] - m[sp]);
-				for (symbol = 0; symbol < 12; symbol++) {
+				for (symbol = 0; symbol < 13; symbol++) {
 					if (!strcmp(BB_TAGS[symbol], subgroup))
 						break;
 				}
 				break;
 			}
 		}
-		for (sp = 2; sp < 28; sp += 2) {
+		for (sp = 2; sp < 38; sp += 2) {
 			if (m[sp] != -1)
 				break;
 		}
@@ -168,6 +170,12 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 				}
 			}
 		} else if (sp == 26) { //[color=]
+			strcpy(tmp_replacer, HTML_OPEN[symbol]);
+			strncat(tmp_replacer, *buffer + m[sp + 2], (m[sp + 3] - m[sp + 2]));
+			strcat(tmp_replacer, HTML_CLOSE[symbol]);
+			strncat(tmp_replacer, *buffer + m[sp + 4], (m[sp + 5] - m[sp + 4]));
+			strcat(tmp_replacer, HTML_END[symbol]);
+		} else if (sp == 32) { //[size=]
 			strcpy(tmp_replacer, HTML_OPEN[symbol]);
 			strncat(tmp_replacer, *buffer + m[sp + 2], (m[sp + 3] - m[sp + 2]));
 			strcat(tmp_replacer, HTML_CLOSE[symbol]);
