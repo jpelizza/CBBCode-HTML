@@ -4,11 +4,11 @@ posteriorly adding support to custom emoticons and tags.
 I'm using https://www.bbcode.org/reference.php as a reference of all tags that should be implemented by default.
 
 supported:
-\[b] \[i] \[u] \[s] \[quote] \[url] \[url=]  \[code]  \[center] \[left] \[right] \[spoiler]
+\[b] \[i] \[u] \[s] \[quote] \[url]  \[code]  \[center] \[left] \[right] \[spoiler]
 \[img] \[url=]  \[img width={width} height={height}]  \[img {width}x{height}] 
+\[color=]
 
 working on:
-\[color=]
 \[size=]
 
 NOT supported:

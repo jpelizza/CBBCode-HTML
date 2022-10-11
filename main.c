@@ -18,14 +18,16 @@ int main(int argc, char *argv[]) {
 						   "aaa[url]bbb[/url]ccc",
 						   "aaa[img]https://image.com/img.jpg[/img]ccc",
 						   "aaa[img 120x320]https://image.com/img.jpg[/img]ccc",
-						   "aaa[img width=320 height=120]https://image.com/img.jpg[/img]ccc"};
+						   "aaa[img width=320 height=120]https://image.com/img.jpg[/img]ccc",
+						   "aaa[color=green]green[/color]ccc",
+						   "aaa[color=#00AA00]green[/color]ccc"};
 
-	for (int i = 12; i < 16; i++) {
+	printf("\n\n\n\n\n\n\n");
+	for (int i = 15; i < 18; i++) {
 		char *buf = NULL;
 		printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
 		printf("Ori:%s mem:%d\n", bbcode[i]);
 		printf("Str:%s mem:%d\n", buf, (void *)&buf);
 		free(buf);
 	}
-	printf("\n\n\n\n\n\n\n");
 }
