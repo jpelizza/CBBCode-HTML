@@ -24,7 +24,7 @@ int main(int argc, char *argv[]) {
 						   "aaa[size=11]size 11 px[/size]ccc"};
 
 	printf("\n\n\n\n\n\n\n");
-	for (int i = 0; i < 17; i++) {
+	for (int i = 17; i < 18; i++) {
 		char *buf = NULL;
 		printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
 		printf("Ori:%s mem:%d\n", bbcode[i]);

@@ -12,5 +12,5 @@ supported:
 working on:
 
 NOT supported:
- \[quote=] \[spoiler=] 
+\[quote=] \[spoiler=] 
 \[ul] \[li] \[code={language}] \[table] \[tr] \[th] 
