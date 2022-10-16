@@ -189,9 +189,10 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		//*buffer = realloc(*buffer,buffer_size * sizeof(char));
 		*buffer = (char *)realloc(*buffer,sizeof(char) * (buffer_size+1));
 		
-		PCRE2_UCHAR output[6144] = "";
-		PCRE2_SIZE outlen = sizeof(output) / sizeof(PCRE2_UCHAR);
-
+		PCRE2_UCHAR *output = NULL;
+		PCRE2_SIZE outlen = (sizeof(PCRE2_UCHAR)*(buffer_size)) / sizeof(PCRE2_UCHAR);
+		output = (PCRE2_UCHAR *)malloc(sizeof(PCRE2_UCHAR)*(sizeof(PCRE2_UCHAR)*(buffer_size+1)) / sizeof(PCRE2_UCHAR));
+		memset(output,'\0',outlen);
 		// printf("outpu2\n",buffer_size);
 		// PCRE2_UCHAR *output2 = NULL;
 		// printf("buffer_size: %d\n",buffer_size);

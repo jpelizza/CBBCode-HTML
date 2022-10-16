@@ -79,11 +79,11 @@ int main(int argc, char *argv[]) {
 
 		printf("\n\n\n\n\n\n\n");
 		char *buf = NULL;
-		printf("-%d-\n", bbcodetohtml_simple(bbcode_huge, &buf));
-		printf("Str:%s mem:%d\n", buf, (void *)&buf);
-		printf("buf size: %d\n",strlen(buf));
-		free(buf);
-		return;
+		// printf("-%d-\n", bbcodetohtml_simple(bbcode_huge, &buf));
+		// printf("Str:%s mem:%d\n", buf, (void *)&buf);
+		// printf("buf size: %d\n",strlen(buf));
+		// free(buf);
+		// return;
 		for (int i = 0; i < 18; i++) {
 			printf("-FOR-\n");
 			printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
