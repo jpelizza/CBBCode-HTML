@@ -19,13 +19,15 @@
  * 2 if regex compilation error
  */
 int bbcodetohtml_simple(const char *bbcode, char **buffer) {
+	printf("0\n");
+	
 	pcre2_code *regex = NULL;
 	pcre2_match_data *matches = pcre2_match_data_create(32, NULL);
 	int buffer_size = strlen(bbcode);
 	PCRE2_SIZE erroffset, *m;
 	int errorcode;
 
-	*buffer = (char *)malloc(sizeof(char) * (strlen(bbcode)));
+	*buffer = (char *)malloc(sizeof(char) * (strlen(bbcode)+1));
 	// Sanity check
 	if (*buffer == NULL)
 		return 1;
@@ -66,9 +68,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 								 "</span>", "</a>",   "</code>", "",		"</div>", "</div>"};
 
 	// REGEX COMPILE
-	// printf("*buffer=%s, strlen:%d\n", *buffer, strlen(*buffer));
 	regex = pcre2_compile(pattern, -1, 0, &errorcode, &erroffset, NULL);
-	// printf("*buffer=%s, strlen:%d\n ", *buffer, strlen(*buffer));
 	if (regex == NULL) {
 		return 2;
 	}
@@ -101,22 +101,17 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 		size_t CLOSE_SIZE = strlen(HTML_CLOSE[symbol]);
 		size_t END_SIZE = strlen(HTML_END[symbol]);
 		size_t TAG_SIZE = strlen(BB_TAGS[symbol]);
-		// '5' comes from '[]'+'[/]' that are always present
 		// 2*TAG since tag both opens and closes
-		signed long REPLACE_SIZE = OPEN_SIZE + CLOSE_SIZE + END_SIZE + 5 - (2 * TAG_SIZE);
+		// '5' comes from '[]'+'[/]' that are always present
+		//+15 due to img tag possibly having " width=" and " heigth=", it's easier to deal with 15 extra bytes
+		unsigned long REPLACE_SIZE = OPEN_SIZE + CLOSE_SIZE + END_SIZE - ((2 * TAG_SIZE) + 5) +15;
 		// tmp_replacer_size = len(group_1)+REPLACE_SIZE
-		
+
 		int tmp_replacer_size = (m[1] - m[0]) + REPLACE_SIZE;
 		char *tmp_replacer = 
-			(char *)malloc(sizeof(char) * (tmp_replacer_size));
-		memset(tmp_replacer,'\0',tmp_replacer_size);
-		// REPLACING FOR SIMPLE
-		// TO ADAPT THIS SIMPLY CHANGE [2] and [3]
-		// TO [RE_MULT] and [RE_MULT+1]
-		// WHERE RE_MULT is on a for loop looking for which m[X] != -1;
-		memset(tmp_replacer, '\0', tmp_replacer_size);
+			(char *)malloc(sizeof(char) * (tmp_replacer_size+1));
+		memset(tmp_replacer,'\0',tmp_replacer_size+1);
 		printf("2\n");
-		printf("buffer_size : %d\n",buffer_size);
 
 		if (sp == 2) {
 			strcpy(tmp_replacer, HTML_OPEN[symbol]);
@@ -188,28 +183,28 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 			strcat(tmp_replacer, HTML_END[symbol]);
 		}
 
+		//+1 due to '\0'
+		buffer_size = buffer_size+REPLACE_SIZE;
+
+		//*buffer = realloc(*buffer,buffer_size * sizeof(char));
+		*buffer = (char *)realloc(*buffer,sizeof(char) * (buffer_size+1));
+		
 		PCRE2_UCHAR output[6144] = "";
 		PCRE2_SIZE outlen = sizeof(output) / sizeof(PCRE2_UCHAR);
-		
-		// printf("*buffer: %s\n",*buffer);
-		// printf("buffer_size: %d\n",buffer_size);
-		if(strlen(*buffer)+strlen(tmp_replacer)>buffer_size){
-			printf("realloc 1\n");
-			printf("strlne buffer_size : %d\n",strlen(*buffer));
-			printf("strlen tmp_replacer : %d\n",strlen(tmp_replacer));
-			printf("buffer_size : %d\n",buffer_size);
-			buffer_size = strlen(*buffer)+strlen(tmp_replacer);
-			printf("realloc 2\n");
-			printf("*buffer: %s\n",*buffer);
-			printf("buffer_size : %d\n",buffer_size);
-			*buffer = realloc(*buffer,buffer_size * sizeof(char));
-			if(*buffer==NULL){
-				printf("exit 0\n");
-				exit(0);
-			}
-		}		
 
-		printf("4\n");
+		// printf("outpu2\n",buffer_size);
+		// PCRE2_UCHAR *output2 = NULL;
+		// printf("buffer_size: %d\n",buffer_size);
+		// printf("outlen: %d\n",buffer_size);
+		// PCRE2_SIZE outlen2 = buffer_size+1;
+		// memset(outlen2,'\0',buffer_size);
+		// printf("buffer_size: %d\n",buffer_size);
+
+		if(*buffer==NULL){
+			printf("exit 0\n");
+			exit(0);
+		}
+
 
 		pcre2_substitute(regex,						// code
 						 *buffer,					// subject string
@@ -223,16 +218,17 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 						 output,					// buffer
 						 &outlen					// buffer size
 		);
-		printf("5\n");
 
 		strcpy(*buffer, output);
 		free(tmp_replacer);
 		free(subgroup);
 	}
-	printf("RETURNING\n");
+	printf("FOR FREE\n");
 
 	pcre2_code_free(regex);
 	pcre2_match_data_free(matches);
+	printf("RETRUN\n");
+	printf("buffer mem: %d\n",&(*buffer));
 	
 	return 0;
 

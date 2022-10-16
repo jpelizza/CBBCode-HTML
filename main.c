@@ -4,7 +4,7 @@
 #include <string.h>
 
 int main(int argc, char *argv[]) {
-	char bbcode[][1024] = {"aaa[b]bbb[/b]cccccc",
+	char bbcode[][1024] = {"aaa[b]bbb[/b]ccc",
 						   "aaa[i]bbb[/i]ccc",
 						   "aaa[u]bbb[/u]ccc",
 						   "aaa[s]bbb[/s]ccc",
@@ -79,13 +79,19 @@ int main(int argc, char *argv[]) {
 
 		printf("\n\n\n\n\n\n\n");
 		char *buf = NULL;
-		// printf("-%d-\n", bbcodetohtml_simple(bbcode_huge, &buf));
-		// printf("Str:%s mem:%d\n", buf, (void *)&buf);
-		// return;
-		for (int i = 0; i < 18; i++) {
-		printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
-		printf("Ori:%s mem:%d\n", bbcode[i]);
+		printf("-%d-\n", bbcodetohtml_simple(bbcode_huge, &buf));
 		printf("Str:%s mem:%d\n", buf, (void *)&buf);
+		printf("buf size: %d\n",strlen(buf));
 		free(buf);
+		return;
+		for (int i = 0; i < 18; i++) {
+			printf("-FOR-\n");
+			printf("-%d-\n", bbcodetohtml_simple(bbcode[i], &buf));
+			printf("Ori:%s mem:%d\n", bbcode[i]);
+			printf("Str:%s mem:%d\n", buf, &buf);
+			printf("buf mem: %d\n",&buf);
+			printf("buf size: %d\n",strlen(buf));
+			free(buf);
+			printf("-/FOR-\n");
 	}
 }
