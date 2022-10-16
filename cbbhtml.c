@@ -21,9 +21,17 @@
 int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	pcre2_code *regex = NULL;
 	pcre2_match_data *matches = pcre2_match_data_create(32, NULL);
-	PCRE2_SIZE buffer_size = (*buffer == NULL) ? -1 : (PCRE2_SIZE)strlen(*buffer);
+	int buffer_size = strlen(bbcode);
 	PCRE2_SIZE erroffset, *m;
 	int errorcode;
+
+	*buffer = (char *)malloc(sizeof(char) * (strlen(bbcode)));
+	// Sanity check
+	if (*buffer == NULL)
+		return 1;
+	// Copies bbcode to buffer for editing;
+	strcpy(*buffer, bbcode);
+	
 	// REGEX: \[(b|i|u|s|url|quote|code)\].*?\[\/\1\]
 	// REGEX IMAGE: \[img\](.*?)\[\/img\]
 	// REGEX URL= and COLOR=: \[((url|color)=)(#.+?|https?:\/\/.+?)\](.*)?\[\/\5\]
@@ -44,27 +52,18 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 								  "<div style=\"text-align:center\">",
 								  "<div style=\"text-align:left\">",
 								  "<div style=\"text-align:right\">",
-								  "<quoteblock>",
+								  "<quoteblock>",//QUOTE
 								  "<span class=\"spoiler\">",
 								  "<a href=\"",
 								  "<code>",
 								  "<img src=\"",
 								  "<div style=\"color:",
 								  "<div style=\"font-size:"};
-	const char HTML_CLOSE[][64] = {"", "", "", "", "", "", "", "", "", "\">", "", ">", ";\">", "px;\">"};
+	const char HTML_CLOSE[][64] = {"", "", "", "", "", "", "", "",//QUOTE
+	 "", "\">", "", ">", ";\">", "px;\">"};
 	const char HTML_END[][64] = {"</strong>",	  "</em>",	 "</ins>", "</del>",  "</div>", "</div>", "</div>",
-								 "</quoteblock>", "</span>", "</a>",   "</code>", "",		"</div>", "</div>"};
-	// MALLOC BUFFER
-	if (buffer_size == -1) {
-		*buffer = (char *)malloc(sizeof(char) * (strlen(bbcode) + 1));
-		buffer_size = strlen(bbcode);
-	}
-	// Sanity check
-
-	if (*buffer == NULL)
-		return 1;
-	// Copies bbcode to buffer for editing;
-	strcpy(*buffer, bbcode);
+								 "</quoteblock>",//QUOTE
+								 "</span>", "</a>",   "</code>", "",		"</div>", "</div>"};
 
 	// REGEX COMPILE
 	// printf("*buffer=%s, strlen:%d\n", *buffer, strlen(*buffer));
@@ -75,6 +74,7 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 	}
 
 	// While there is at least a match of the regex on buffer
+	printf("1\n");
 	while (pcre2_match(regex, *buffer, -1, 0, 0, matches, NULL) > 0) {
 		m = pcre2_get_ovector_pointer(matches);
 		int symbol, sp;
@@ -96,22 +96,27 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 			if (m[sp] != -1)
 				break;
 		}
+		
 		size_t OPEN_SIZE = strlen(HTML_OPEN[symbol]);
 		size_t CLOSE_SIZE = strlen(HTML_CLOSE[symbol]);
-		size_t END_SIZE = strlen(HTML_CLOSE[symbol]);
+		size_t END_SIZE = strlen(HTML_END[symbol]);
 		size_t TAG_SIZE = strlen(BB_TAGS[symbol]);
 		// '5' comes from '[]'+'[/]' that are always present
 		// 2*TAG since tag both opens and closes
 		signed long REPLACE_SIZE = OPEN_SIZE + CLOSE_SIZE + END_SIZE + 5 - (2 * TAG_SIZE);
 		// tmp_replacer_size = len(group_1)+REPLACE_SIZE
-		int tmp_replacer_size = (m[1] - m[0]) + REPLACE_SIZE + 16;
-		char *tmp_replacer = (char *)malloc(sizeof(char) * (tmp_replacer_size));
-
+		
+		int tmp_replacer_size = (m[1] - m[0]) + REPLACE_SIZE;
+		char *tmp_replacer = 
+			(char *)malloc(sizeof(char) * (tmp_replacer_size));
+		memset(tmp_replacer,'\0',tmp_replacer_size);
 		// REPLACING FOR SIMPLE
 		// TO ADAPT THIS SIMPLY CHANGE [2] and [3]
 		// TO [RE_MULT] and [RE_MULT+1]
 		// WHERE RE_MULT is on a for loop looking for which m[X] != -1;
 		memset(tmp_replacer, '\0', tmp_replacer_size);
+		printf("2\n");
+		printf("buffer_size : %d\n",buffer_size);
 
 		if (sp == 2) {
 			strcpy(tmp_replacer, HTML_OPEN[symbol]);
@@ -183,8 +188,28 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 			strcat(tmp_replacer, HTML_END[symbol]);
 		}
 
-		PCRE2_UCHAR output[3072] = "";
+		PCRE2_UCHAR output[6144] = "";
 		PCRE2_SIZE outlen = sizeof(output) / sizeof(PCRE2_UCHAR);
+		
+		// printf("*buffer: %s\n",*buffer);
+		// printf("buffer_size: %d\n",buffer_size);
+		if(strlen(*buffer)+strlen(tmp_replacer)>buffer_size){
+			printf("realloc 1\n");
+			printf("strlne buffer_size : %d\n",strlen(*buffer));
+			printf("strlen tmp_replacer : %d\n",strlen(tmp_replacer));
+			printf("buffer_size : %d\n",buffer_size);
+			buffer_size = strlen(*buffer)+strlen(tmp_replacer);
+			printf("realloc 2\n");
+			printf("*buffer: %s\n",*buffer);
+			printf("buffer_size : %d\n",buffer_size);
+			*buffer = realloc(*buffer,buffer_size * sizeof(char));
+			if(*buffer==NULL){
+				printf("exit 0\n");
+				exit(0);
+			}
+		}		
+
+		printf("4\n");
 
 		pcre2_substitute(regex,						// code
 						 *buffer,					// subject string
@@ -198,12 +223,17 @@ int bbcodetohtml_simple(const char *bbcode, char **buffer) {
 						 output,					// buffer
 						 &outlen					// buffer size
 		);
+		printf("5\n");
+
 		strcpy(*buffer, output);
-		memset(output, '\0', outlen);
-		free(subgroup);
 		free(tmp_replacer);
+		free(subgroup);
 	}
-	// pcre2_code_free(regex);
+	printf("RETURNING\n");
+
+	pcre2_code_free(regex);
 	pcre2_match_data_free(matches);
+	
 	return 0;
+
 }
